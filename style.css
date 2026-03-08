@@ -119,20 +119,101 @@ background: #121212;
   gap:6px;
 }
 
-.ballBox{
-  width:30px;
-  height:30px;
-  border-radius:6px;
-  background:#eeeeee;
-color: #121212;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:bold;
-}
-
 #scoreboardCard{
 display:flex;
 flex-direction:column;
 gap:8px;
+}
+
+.fingerBtn.selected{
+background:#00AE00;
+color:white;
+}
+
+.ballBox{
+  width:30px;
+  height:30px;
+  background:#222;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:6px;
+  font-weight:bold;
+}
+
+.ballFlash{
+  animation:ballFlash 0.5s;
+}
+
+@keyframes ballFlash{
+  0%{transform:scale(1.5);background:#00FF00}
+  100%{transform:scale(1)}
+}
+
+.lobbyCard{
+background:#121212;
+padding:25px;
+border-radius:16px;
+width:90%;
+max-width:400px;
+box-shadow:0 8px 25px rgba(0,0,0,0.4);
+}
+
+.roomCodeBox{
+background:#1f2937;
+padding:10px;
+border-radius:8px;
+margin-bottom:20px;
+font-weight:bold;
+}
+
+.teamRow{
+display:flex;
+justify-content:space-between;
+gap:15px;
+margin-bottom:20px;
+}
+
+.teamBox{
+flex:1;
+background:#1f2937;
+padding:15px;
+border-radius:10px;
+}
+
+#themeToggle{
+position:fixed;
+top:15px;
+right:15px;
+z-index:999;
+background:#1f2937;
+color:white;
+border:none;
+padding:8px 12px;
+border-radius:8px;
+cursor:pointer;
+}
+
+body.light{
+background:#f3f4f6;
+color:#111;
+}
+
+body.light #scoreboardCard{
+background:white;
+color:#111;
+}
+
+body.light .lobbyCard{
+background:white;
+color:#111;
+}
+
+body.light .teamBox{
+background:#e5e7eb;
+}
+
+body.light .roomCodeBox{
+background:#e5e7eb;
 }
