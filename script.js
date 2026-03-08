@@ -6,6 +6,18 @@ let roomCode = "";
 let isHost = false;
 let gameMode = "limited";
 
+const sounds = {
+wicket: new Audio("sounds/wicket.mp3"),
+six: new Audio("sounds/six.m4a")
+};
+
+function playSound(name){
+if(sounds[name]){
+sounds[name].currentTime=0;
+sounds[name].play();
+}
+}
+
 function showScreen(id) {
     document.querySelectorAll(".screen").forEach(screen => {
         screen.classList.remove("active");
@@ -108,6 +120,9 @@ function lockHand() {
     return;
   }
 
+  if(window.handLocked) return;
+  window.handLocked = true;
+
   socket.send(JSON.stringify({
     type: "HAND_SELECT",
     player: isHost ? "A" : "B",
@@ -120,21 +135,45 @@ function lockHand() {
   }));
 
   selectedFingers = [];
-  document.getElementById("selectedDisplay").innerText = "Locked!";
+
+document.querySelectorAll(".fingerBtn").forEach(btn=>{
+btn.classList.remove("selected");
+});
+
+document.getElementById("selectedDisplay").innerText =
+"Locked! Waiting for opponent...";
 }
 
-function toggleFinger(finger) {
+function toggleFinger(finger, btn) {
 
   if (selectedFingers.includes(finger)) {
+
     selectedFingers = selectedFingers.filter(f => f !== finger);
+    btn.classList.remove("selected");
+
   } else {
+
     selectedFingers.push(finger);
+    btn.classList.add("selected");
+
   }
 
   document.getElementById("selectedDisplay").innerText =
     selectedFingers.length > 0
       ? selectedFingers.join(", ")
       : "None";
+}
+
+function continueGame(){
+
+if(window.afterCopy){
+window.afterCopy = false;
+showScreen("lobbyScreen");
+return;
+}
+
+showScreen("gameScreen");
+
 }
 
 function setMode(mode) {
@@ -156,14 +195,50 @@ function setMode(mode) {
 
 function startMatch() {
 
-  if (!isHost) {
-    alert("Only host can start the match!");
-    return;
-  }
+const teamA=document.getElementById("teamA").innerText;
+const teamB=document.getElementById("teamB").innerText;
 
-  socket.send(JSON.stringify({
-    type: "START_MATCH"
-  }));
+if(!isHost){
+alert("Only host can start match");
+return;
+}
+
+if(teamA==="Empty" || teamB==="Empty" || teamB==="Waiting..."){
+alert("Waiting for opponent to join");
+return;
+}
+
+socket.send(JSON.stringify({
+type:"START_MATCH"
+}));
+
+}
+
+function copyRoomCode(){
+
+navigator.clipboard.writeText(roomCode);
+
+document.getElementById("resultTitle").innerText = "Copied";
+document.getElementById("resultText").innerText = "Room code copied to clipboard";
+
+showScreen("resultScreen");
+
+window.afterCopy = true;
+
+}
+
+function toggleTheme(){
+
+document.body.classList.toggle("light");
+
+const btn=document.getElementById("themeToggle");
+
+if(document.body.classList.contains("light")){
+btn.innerText="☀️";
+}else{
+btn.innerText="🌙";
+}
+
 }
 
 function connectToServer(code, overs, wickets) {
@@ -217,10 +292,10 @@ if (data.type === "ROOM_JOINED") {
 
 if (data.type === "MATCH_DECISION") {
 
-  alert(
-    "Batting: " + data.payload.batting +
-    "\nBowling: " + data.payload.bowling
-  );
+alert(
+"Batting: " + data.payload.batting +
+"\nBowling: " + data.payload.bowling
+);
 
   showScreen("gameScreen");
 }
@@ -239,6 +314,8 @@ if (data.type === "TOSS_CALLER") {
 }
 
 if (data.type === "BALL_RESULT") {
+
+window.handLocked = false;
 
 const battingName = data.payload.battingName;
 const bowlingName = data.payload.bowlingName;
@@ -290,21 +367,20 @@ document.getElementById("overDisplay").innerText =
 document.getElementById("ballsLeftDisplay").innerText =
   data.payload.ballsLeft;
 
-let crr = 0;
-
-if (balls > 0) {
-  crr = (battingScore * 6) / balls;
-}
-
-document.getElementById("crrDisplay").innerText =
-  crr.toFixed(2);
-
 if (data.payload.target) {
 
   let target = data.payload.target;
   let ballsLeft = data.payload.ballsLeft;
 
   document.getElementById("targetDisplay").innerText = target;
+
+  let runsLeft = target - battingScore;
+
+  if(runsLeft < 0){
+  runsLeft = 0;
+  }
+
+  document.getElementById("runsLeftDisplay").innerText = runsLeft;
 
   if (ballsLeft > 0) {
 
@@ -316,7 +392,6 @@ if (data.payload.target) {
       rrr.toFixed(2);
 
   }
-
 }
 
 let ballRun;
@@ -329,7 +404,7 @@ if (data.payload.out) {
 
 let ballNumber = balls % 6;
 
-if (ballNumber === 1) {
+if(ballNumber === 1){
   lastBalls = [];
 }
 
@@ -338,7 +413,17 @@ lastBalls.push(ballRun);
 const boxes = document.querySelectorAll(".ballBox");
 
 boxes.forEach((box, i) => {
+
   box.innerText = lastBalls[i] || "-";
+
+  if(i === lastBalls.length-1){
+    box.classList.add("ballFlash");
+
+    setTimeout(()=>{
+      box.classList.remove("ballFlash");
+    },500);
+  }
+
 });
 
   document.getElementById("inningsDisplay").innerText = data.payload.innings;
@@ -347,12 +432,33 @@ boxes.forEach((box, i) => {
     document.getElementById("targetDisplay").innerText = data.payload.target;
   }
 
-  if (data.payload.out) {
-    document.getElementById("ballMessage").innerText = "OUT!";
-  } else {
-    document.getElementById("ballMessage").innerText = "Runs scored!";
+const msg = document.getElementById("ballMessage");
+
+if(data.payload.out){
+playSound("wicket");
+
+  msg.innerText = "WICKET!";
+  msg.style.color = "#ff4444";
+
+}else{
+
+  let runs = data.payload.lastRuns;
+
+  if(runs === 6){
+playSound("six");
+    msg.innerText = "SIX!";
+    msg.style.color = "#ff9800";
+  }
+  else if(runs === 4){
+    msg.innerText = "FOUR!";
+    msg.style.color = "#4caf50";
+  }
+  else{
+    msg.innerText = runs + " RUN";
+    msg.style.color = "white";
   }
 
+}
   if (data.payload.matchOver) {
 
   document.getElementById("ballMessage").innerText =
@@ -372,10 +478,10 @@ boxes.forEach((box, i) => {
 
 if (data.type === "TOSS_RESULT") {
 
-  alert(
-    "Coin: " + data.payload.coin +
-    "\nWinner: " + data.payload.winner
-  );
+alert(
+  "Coin: " + data.payload.coin +
+  "\nWinner: " + data.payload.winner
+);
 
   showScreen("decisionScreen");
 
