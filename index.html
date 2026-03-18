@@ -84,8 +84,6 @@
   </div>
 </div>
 
-<!-- REPLACE the entire tossScreen div -->
-
 <!-- TOSS SCREEN -->
 <div id="tossScreen" class="screen">
   <div class="centerCard">
@@ -122,8 +120,6 @@
     </div>
   </div>
 </div>
-
-<!-- Add this AFTER the decisionScreen div and BEFORE gameScreen -->
 
 <!-- MATCH PREVIEW SCREEN -->
 <div id="matchPreviewScreen" class="screen">
@@ -193,68 +189,125 @@
       <div class="ballBox">-</div>
       <div class="ballBox">-</div>
     </div>
+    <!-- Add spectator count to game screen -->
+    <div class="scoreRow6">
+      <span class="liveSpectators">👁️ <span id="liveSpectatorCount">0</span> watching</span>
+    </div>
   </div>
 
   <div class="gameControls">
-  <p id="ballMessage" class="ballMessage"></p>
-  <p class="controlLabel">Click fingers to open them</p>
-  
-  <!-- SVG Hand -->
-  <div class="handContainer">
-    <svg class="hand" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
-      <!-- Palm -->
-      <ellipse cx="150" cy="280" rx="70" ry="90" fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-      
-      <!-- Thumb -->
-      <g id="thumb" class="finger" onclick="toggleHandFinger('thumb')">
-        <path class="finger-closed" d="M 80 250 Q 50 230 45 200 Q 40 170 50 150 L 70 155 Q 65 175 68 200 Q 72 225 90 240 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-        <path class="finger-open" d="M 80 250 Q 30 240 15 210 Q 0 180 5 140 L 25 145 Q 22 175 30 200 Q 40 230 90 240 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3" opacity="0"/>
-      </g>
-      
-      <!-- Index -->
-      <g id="index" class="finger" onclick="toggleHandFinger('index')">
-        <path class="finger-closed" d="M 110 200 Q 105 160 108 120 Q 110 80 115 50 L 135 52 Q 132 85 130 120 Q 128 160 125 200 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-        <path class="finger-open" d="M 110 200 Q 105 140 108 90 Q 110 40 115 10 L 135 12 Q 132 45 130 90 Q 128 140 125 200 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3" opacity="0"/>
-      </g>
-      
-      <!-- Middle -->
-      <g id="middle" class="finger" onclick="toggleHandFinger('middle')">
-        <path class="finger-closed" d="M 140 200 Q 138 155 140 110 Q 142 65 145 30 L 165 32 Q 162 70 160 110 Q 158 155 157 200 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-        <path class="finger-open" d="M 140 200 Q 138 145 140 95 Q 142 45 145 5 L 165 7 Q 162 50 160 95 Q 158 145 157 200 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3" opacity="0"/>
-      </g>
-      
-      <!-- Ring -->
-      <g id="ring" class="finger" onclick="toggleHandFinger('ring')">
-        <path class="finger-closed" d="M 175 200 Q 175 160 178 120 Q 180 80 183 50 L 203 52 Q 200 85 198 120 Q 196 160 193 200 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-        <path class="finger-open" d="M 175 200 Q 175 145 178 95 Q 180 45 183 15 L 203 17 Q 200 50 198 95 Q 196 145 193 200 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3" opacity="0"/>
-      </g>
-      
-      <!-- Pinky -->
-      <g id="pinky" class="finger" onclick="toggleHandFinger('pinky')">
-        <path class="finger-closed" d="M 210 210 Q 215 175 220 145 Q 225 115 228 90 L 245 93 Q 242 120 238 145 Q 233 175 227 210 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-        <path class="finger-open" d="M 210 210 Q 215 165 220 125 Q 225 85 228 55 L 245 58 Q 242 90 238 125 Q 233 165 227 210 Z" 
-              fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3" opacity="0"/>
-      </g>
-      
-      <!-- Wrist -->
-      <rect x="110" y="340" width="80" height="50" rx="10" fill="var(--hand-skin)" stroke="var(--hand-outline)" stroke-width="3"/>
-    </svg>
-  </div>
-  
-  <p class="selectedLabel">Selected: <span id="selectedDisplay">None</span></p>
-  <button class="btnLock" onclick="lockHand()">🔒 LOCK HAND</button>
-</div>
+    <p id="ballMessage" class="ballMessage"></p>
 
-</div> <!-- ← closes gameScreen -->
+  <div id="lockStatusBar" class="lockStatusBar" style="display:none;">
+    <div class="lockPlayer" id="lockStatusA">
+      <span class="lockIcon"></span>
+      <span id="lockNameA">Player A</span>
+      <span class="lockState" id="lockStateA">Waiting</span>
+    </div>
+    <div class="lockDivider"></div>
+    <div class="lockPlayer" id="lockStatusB">
+      <span class="lockIcon"></span>
+      <span id="lockNameB">Player B</span>
+      <span class="lockState" id="lockStateB">Waiting</span>
+    </div>
+  </div>
+    <p class="controlLabel">Click fingers to open them</p>
+    
+    <!-- NEW: Realistic hand with curling fingers -->
+    <div class="handContainer">
+      <svg class="hand" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+        <!-- Define gradients for 3D effect -->
+        <defs>
+          <linearGradient id="skinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#ffd4a3;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#ffb366;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ff9933;stop-opacity:1" />
+          </linearGradient>
+          <radialGradient id="palmGradient">
+            <stop offset="0%" style="stop-color:#ffd4a3;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ffb366;stop-opacity:1" />
+          </radialGradient>
+        </defs>
+        
+        <!-- Palm base -->
+        <ellipse cx="200" cy="350" rx="90" ry="110" fill="url(#palmGradient)" stroke="#d4874b" stroke-width="3"/>
+        
+        <!-- Palm details (knuckle lines) -->
+        <path d="M 130 320 Q 200 315 270 320" stroke="#d4874b" stroke-width="1.5" fill="none" opacity="0.4"/>
+        <path d="M 140 340 Q 200 335 260 340" stroke="#d4874b" stroke-width="1.5" fill="none" opacity="0.4"/>
+        
+        <!-- THUMB (3 segments) -->
+        <g id="thumb" class="finger" onclick="toggleHandFinger('thumb')">
+          <!-- Segment 3 (base) -->
+          <ellipse class="thumb-base" cx="120" cy="320" rx="22" ry="30" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 2 (middle) -->
+          <ellipse class="thumb-mid" cx="95" cy="280" rx="20" ry="28" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 1 (tip) -->
+          <ellipse class="thumb-tip" cx="75" cy="240" rx="18" ry="25" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Nail -->
+          <ellipse class="thumb-nail" cx="75" cy="230" rx="12" ry="8" fill="#ffe6d5" stroke="#d4874b" stroke-width="1" opacity="0.8"/>
+        </g>
+        
+        <!-- INDEX FINGER (3 segments) -->
+        <g id="index" class="finger" onclick="toggleHandFinger('index')">
+          <!-- Segment 3 (base) -->
+          <rect class="index-base" x="140" y="280" width="28" height="50" rx="14" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 2 (middle) -->
+          <rect class="index-mid" x="142" y="220" width="24" height="60" rx="12" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 1 (tip) -->
+          <rect class="index-tip" x="144" y="170" width="20" height="50" rx="10" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Nail -->
+          <ellipse class="index-nail" cx="154" cy="175" rx="10" ry="7" fill="#ffe6d5" stroke="#d4874b" stroke-width="1" opacity="0.8"/>
+        </g>
+        
+        <!-- MIDDLE FINGER (3 segments - longest) -->
+        <g id="middle" class="finger" onclick="toggleHandFinger('middle')">
+          <!-- Segment 3 (base) -->
+          <rect class="middle-base" x="180" y="280" width="28" height="55" rx="14" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 2 (middle) -->
+          <rect class="middle-mid" x="182" y="210" width="24" height="70" rx="12" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 1 (tip) -->
+          <rect class="middle-tip" x="184" y="150" width="20" height="60" rx="10" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Nail -->
+          <ellipse class="middle-nail" cx="194" cy="155" rx="10" ry="7" fill="#ffe6d5" stroke="#d4874b" stroke-width="1" opacity="0.8"/>
+        </g>
+        
+        <!-- RING FINGER (3 segments) -->
+        <g id="ring" class="finger" onclick="toggleHandFinger('ring')">
+          <!-- Segment 3 (base) -->
+          <rect class="ring-base" x="220" y="280" width="28" height="50" rx="14" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 2 (middle) -->
+          <rect class="ring-mid" x="222" y="220" width="24" height="60" rx="12" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 1 (tip) -->
+          <rect class="ring-tip" x="224" y="170" width="20" height="50" rx="10" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Nail -->
+          <ellipse class="ring-nail" cx="234" cy="175" rx="10" ry="7" fill="#ffe6d5" stroke="#d4874b" stroke-width="1" opacity="0.8"/>
+        </g>
+        
+        <!-- PINKY FINGER (3 segments - shortest) -->
+        <g id="pinky" class="finger" onclick="toggleHandFinger('pinky')">
+          <!-- Segment 3 (base) -->
+          <rect class="pinky-base" x="260" y="295" width="26" height="45" rx="13" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 2 (middle) -->
+          <rect class="pinky-mid" x="262" y="245" width="22" height="50" rx="11" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Segment 1 (tip) -->
+          <rect class="pinky-tip" x="264" y="205" width="18" height="40" rx="9" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="2.5"/>
+          <!-- Nail -->
+          <ellipse class="pinky-nail" cx="273" cy="210" rx="9" ry="6" fill="#ffe6d5" stroke="#d4874b" stroke-width="1" opacity="0.8"/>
+        </g>
+        
+        <!-- Wrist -->
+        <rect x="130" y="430" width="140" height="60" rx="15" fill="url(#skinGradient)" stroke="#d4874b" stroke-width="3"/>
+        <path d="M 150 450 Q 200 448 250 450" stroke="#d4874b" stroke-width="1.5" fill="none" opacity="0.3"/>
+        <path d="M 150 465 Q 200 463 250 465" stroke="#d4874b" stroke-width="1.5" fill="none" opacity="0.3"/>
+      </svg>
+    </div>
+    
+    <p class="selectedLabel">Selected: <span id="selectedDisplay">None</span></p>
+    <button class="btnLock" onclick="lockHand()">🔒 LOCK HAND</button>
+  </div>
+
+</div>
 
 <!-- INNINGS BREAK SCREEN -->
 <div id="inningsBreakScreen" class="screen">
@@ -285,14 +338,49 @@
   </div>
 </div>
 
-<!-- RESULT SCREEN -->
+<!-- RESULT SCREEN (Enhanced) -->
 <div id="resultScreen" class="screen">
-  <div class="centerCard">
+  <div class="centerCard resultCard">
     <div class="appLogo" id="resultEmoji">🏆</div>
-    <h2 id="resultTitle">Result</h2>
-    <p id="resultText" class="resultText"></p>
-    <button class="btnPrimary fullWidth" onclick="continueGame()">Continue →</button>
-  </div>
+    <h2 id="resultTitle">Match Over!</h2>
+    
+    <!-- Match summary -->
+    <div id="matchSummary" class="matchSummary">
+      <p id="winnerText" class="winnerText">Winner: Team A</p>
+      <p id="marginText" class="marginText">Won by 15 runs</p>
+    </div>
+    
+    <!-- Detailed stats -->
+    <div id="matchStats" class="matchStats">
+      <div class="statRow">
+        <span class="statLabel" id="team1Name">Team A:</span>
+        <span class="statValue" id="team1Score">120	/5</span>
+      </div>
+      <div class="statRow">
+        <span class="statLabel" id="team2Name">Team B:</span>
+        <span class="statValue" id="team2Score">105/8</span>
+      </div>
+      <div class="statRow">
+        <span class="statLabel">Balls Remaining:</span>
+        <span class="statValue" id="ballsRemaining">—</span>
+      </div>
+    </div>
+    
+    <!-- Rematch section -->
+    <div id="rematchSection" class="rematchSection">
+      <p id="rematchStatus" class="rematchStatus"></p>
+
+      <button class="btnPrimary fullWidth" id="rematchBtn" onclick="requestRematch()">🔄 Request Rematch</button>
+
+      <div id="rematchReceiverBtns" style="display:none; flex-direction:column; gap:8px; width:100%;">
+        <button class="btnPrimary fullWidth" onclick="acceptRematch()">✅ Accept Rematch</button>
+        <button class="btnSecondary fullWidth" onclick="declineRematch()">❌ Decline</button>
+      </div>
+    </div>
+
+        <button class="btnSecondary fullWidth" id="exitMatchBtn" onclick="exitMatch()">← Back to Menu</button>
+
+  </div> 
 </div>
 
 <script src="script.js"></script>
