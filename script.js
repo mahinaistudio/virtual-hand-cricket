@@ -1,4 +1,4 @@
-/* script.js */
+/* script.js — full replace with all new features */
 
 let lastBalls = [];
 let selectedFingers = [];
@@ -8,16 +8,24 @@ let roomCode = "";
 let isHost = false;
 let gameMode = "limited";
 let previewCountdownTimer = null;
-let matchWickets = 0; // Store wickets limit
+let breakCountdownTimer = null;
+let matchWickets = 0;
 let isTossing = false;
 let isSpectator = false;
 
 // Game state tracked on frontend
-let mySlot = null;         // "A" or "B"
+let mySlot = null;
 let currentBattingName = "";
 let currentBowlingName = "";
-let matchMode = "limited"; // synced from server on MATCH_DECISION
+let matchMode = "limited";
 let matchOvers = 0;
+
+// Match result data for enhanced display
+let matchResultData = null;
+
+// Rematch state
+let rematchRequested = false;
+let rematchRequestedBy = null;
 
 const sounds = {
   wicket: new Audio("sounds/wicket.mp3"),
@@ -83,7 +91,7 @@ function startFromPreview() {
   selectedFingers = [];
   document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
   document.getElementById("selectedDisplay").innerText = "None";
-  
+
   document.getElementById("mainScore").innerText = "0 / 0";
   document.getElementById("overDisplay").innerText = "0.0";
   document.getElementById("ballsLeftDisplay").innerText =
@@ -94,8 +102,9 @@ function startFromPreview() {
   document.getElementById("ballMessage").innerText = "";
   document.querySelectorAll(".ballBox").forEach(b => b.innerText = "-");
   window.handLocked = false;
-  
-  // Hide controls for spectators
+
+  resetLockBar();
+
   if (isSpectator) {
     document.querySelector(".handContainer").style.display = "none";
     document.querySelector(".btnLock").style.display = "none";
@@ -103,15 +112,13 @@ function startFromPreview() {
     document.querySelector(".selectedLabel").style.display = "none";
     document.getElementById("ballMessage").innerText = "Watching the match...";
   }
-  
+
   showScreen("gameScreen");
 }
 
 function goToRoomSetup() {
   showScreen("roomSetupScreen");
 }
-
-/* script.js — replace setMode() */
 
 function setMode(mode) {
   gameMode = mode;
@@ -168,13 +175,21 @@ function startMatch() {
 
 function copyRoomCode() {
   navigator.clipboard.writeText(roomCode);
-  window.afterCopy = true;
-  document.getElementById("resultTitle").innerText = "Copied!";
-  document.getElementById("resultText").innerText = "Room code copied to clipboard.";
-  showScreen("resultScreen");
-}
 
-/* script.js — replace continueGame() */
+  // Use a simple toast-style overlay instead of hijacking the result screen
+  const toast = document.createElement("div");
+  toast.innerText = "✅ Room code copied!";
+  toast.style.cssText = `
+    position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+    background:var(--green); color:#0f172a;
+    padding:12px 24px; border-radius:10px;
+    font-weight:700; font-size:15px;
+    z-index:9999; box-shadow:0 4px 16px rgba(0,0,0,0.3);
+    animation: fadeInUp 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
 
 function continueGame() {
   if (window.afterCopy) {
@@ -202,7 +217,7 @@ function toggleTheme() {
 }
 
 function sendToss(choice) {
-  if (isTossing) return; // Prevent multiple tosses
+  if (isTossing) return;
   
   socket.send(JSON.stringify({
     type: "TOSS_CHOICE",
@@ -210,7 +225,6 @@ function sendToss(choice) {
     choice
   }));
   
-  // If not passing, prepare for animation
   if (choice !== "pass") {
     isTossing = true;
     document.getElementById("tossButtons").style.display = "none";
@@ -222,23 +236,17 @@ function animateCoinFlip(result) {
   const coin = document.getElementById("coin");
   const message = document.getElementById("tossMessage");
   
-  // Reset any previous animation
   coin.classList.remove("flip-heads", "flip-tails");
-  
-  // Trigger reflow to restart animation
   void coin.offsetWidth;
   
-  // Start flip animation
   if (result === "head") {
     coin.classList.add("flip-heads");
   } else {
     coin.classList.add("flip-tails");
   }
   
-  // Update message during flip
   message.innerText = "Coin is in the air...";
   
-  // Show result after animation (2s)
   setTimeout(() => {
     message.innerText = result === "head" ? "It's HEADS! 🟡" : "It's TAILS! 🔵";
     isTossing = false;
@@ -248,7 +256,7 @@ function animateCoinFlip(result) {
 function sendDecision(choice) {
   socket.send(JSON.stringify({
     type: "BAT_BOWL_CHOICE",
-    player: isHost ? "A" : "B",
+    player: mySlot,
     choice
   }));
 }
@@ -259,16 +267,13 @@ function toggleHandFinger(finger) {
   const fingerElement = document.getElementById(finger);
   
   if (selectedFingers.includes(finger)) {
-    // Close finger
     selectedFingers = selectedFingers.filter(f => f !== finger);
     fingerElement.classList.remove("open");
   } else {
-    // Open finger
     selectedFingers.push(finger);
     fingerElement.classList.add("open");
   }
   
-  // Update display
   const fingerNames = {
     thumb: "👍 Thumb",
     index: "☝️ Index", 
@@ -293,7 +298,6 @@ function lockHand() {
   
   window.handLocked = true;
   
-  // Send selections
   socket.send(JSON.stringify({
     type: "HAND_SELECT",
     player: mySlot,
@@ -305,20 +309,16 @@ function lockHand() {
     player: mySlot
   }));
   
-  // Animate hand closing
   const hand = document.querySelector(".hand");
   hand.classList.add("locking");
   
   setTimeout(() => {
-    // Close all fingers visually
     document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
     hand.classList.remove("locking");
-  }, 400);
+  }, 500);
   
   document.getElementById("selectedDisplay").innerText = "🔒 Locked! Waiting...";
 }
-
-// ─── Scoreboard helpers ───────────────────────────────────────────
 
 function updateScoreboard(payload) {
   const {
@@ -331,11 +331,9 @@ function updateScoreboard(payload) {
   currentBattingName = battingName;
   currentBowlingName = bowlingName;
 
-  // Names
   document.getElementById("battingName").innerText = "Bat: " + battingName;
   document.getElementById("bowlingName").innerText = "Bowl: " + bowlingName;
 
-  // Which score belongs to batting team
   const teamAName = document.getElementById("teamA").innerText;
   const battingScore = battingName === teamAName ? scoreA : scoreB;
   const battingWickets = battingName === teamAName ? wicketsA : wicketsB;
@@ -346,7 +344,6 @@ function updateScoreboard(payload) {
   document.getElementById("mainScore").innerText =
     battingScore + " / " + battingWickets;
 
-  // Overs display (limited only)
   if (matchMode === "limited") {
     const over = Math.floor(balls / 6);
     const ball = balls % 6;
@@ -357,10 +354,8 @@ function updateScoreboard(payload) {
     document.getElementById("ballsLeftDisplay").innerText = "-";
   }
 
-  // Innings
   document.getElementById("inningsDisplay").innerText = "Innings: " + innings;
 
-  // Target info (innings 2 only)
   if (target) {
     const runsLeft = Math.max(target - battingScore, 0);
     document.getElementById("targetDisplay").innerText = target;
@@ -368,7 +363,7 @@ function updateScoreboard(payload) {
 
     if (matchMode === "limited" && ballsLeft > 0) {
       document.getElementById("rrrDisplay").innerText =
-        (runsLeft / ballsLeft).toFixed(2);
+        (runsLeft / ballsLeft * 6).toFixed(2);
     } else {
       document.getElementById("rrrDisplay").innerText = "-";
     }
@@ -378,7 +373,6 @@ function updateScoreboard(payload) {
     document.getElementById("rrrDisplay").innerText = "-";
   }
 
-  // Mode label
   document.getElementById("modeDisplay").innerText =
     "Single • " + (matchMode === "limited" ? "Limited" : "Unlimited");
 }
@@ -386,7 +380,6 @@ function updateScoreboard(payload) {
 function updateBallHistory(balls, out, lastRuns) {
   const ballRun = out ? "W" : lastRuns;
 
-  // Reset history at start of each new over (ball 0 = first ball of over)
   if (balls % 6 === 1) {
     lastBalls = [];
   }
@@ -399,16 +392,11 @@ function updateBallHistory(balls, out, lastRuns) {
     box.classList.remove("ballFlash");
   });
 
-  // Flash only the latest ball
   if (boxes[lastBalls.length - 1]) {
     boxes[lastBalls.length - 1].classList.add("ballFlash");
     setTimeout(() => boxes[lastBalls.length - 1].classList.remove("ballFlash"), 500);
   }
 }
-
-/* script.js — add as a new top-level function */
-
-let breakCountdownTimer = null;
 
 function startBreakCountdown() {
   let secs = 5;
@@ -440,7 +428,7 @@ function goToInnings2() {
   selectedFingers = [];
   document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
   document.getElementById("selectedDisplay").innerText = "None";
-  
+
   document.getElementById("mainScore").innerText = "0 / 0";
   document.getElementById("overDisplay").innerText = "0.0";
   document.getElementById("ballsLeftDisplay").innerText =
@@ -451,8 +439,9 @@ function goToInnings2() {
   document.getElementById("ballMessage").innerText = "";
   document.querySelectorAll(".ballBox").forEach(b => b.innerText = "-");
   window.handLocked = false;
-  
-  // Hide controls for spectators
+
+  resetLockBar();
+
   if (isSpectator) {
     document.querySelector(".handContainer").style.display = "none";
     document.querySelector(".btnLock").style.display = "none";
@@ -460,11 +449,9 @@ function goToInnings2() {
     document.querySelector(".selectedLabel").style.display = "none";
     document.getElementById("ballMessage").innerText = "Watching the match...";
   }
-  
+
   showScreen("gameScreen");
 }
-
-/* script.js — replace showBallMessage() */
 
 function showBallMessage(out, lastRuns) {
   const msg = document.getElementById("ballMessage");
@@ -488,8 +475,97 @@ function showBallMessage(out, lastRuns) {
   }
 }
 
-// ─── Server connection ────────────────────────────────────────────
+/// Enhanced result display
+function displayMatchResult(data) {
+  matchResultData = data;
 
+  const { winner, scoreA, scoreB, wicketsA, wicketsB, ballsLeft } = data;
+  const teamAName = document.getElementById("teamA").innerText;
+  const teamBName = document.getElementById("teamB").innerText;
+
+  document.getElementById("matchSummary").style.display = "block";
+  document.getElementById("matchStats").style.display = "block";
+
+  const isDraw = winner === "Draw";
+  document.getElementById("resultEmoji").innerText = isDraw ? "🤝" : "🏆";
+  document.getElementById("resultTitle").innerText = isDraw ? "It's a Draw!" : "Match Over!";
+
+  if (isDraw) {
+    document.getElementById("winnerText").innerText = "Match Drawn";
+    document.getElementById("marginText").innerText = "Both teams scored equal runs";
+  } else {
+    document.getElementById("winnerText").innerText = "🎉 " + winner + " Wins!";
+    const winnerIsA = winner === teamAName;
+    const winnerScore = winnerIsA ? scoreA : scoreB;
+    const loserScore = winnerIsA ? scoreB : scoreA;
+    const runMargin = winnerScore - loserScore;
+    document.getElementById("marginText").innerText =
+      ballsLeft !== null && ballsLeft > 0
+        ? `Won by ${runMargin} run${runMargin !== 1 ? "s" : ""} with ${ballsLeft} ball${ballsLeft !== 1 ? "s" : ""} remaining`
+        : `Won by ${runMargin} run${runMargin !== 1 ? "s" : ""}`;
+  }
+
+  document.getElementById("team1Name").innerText = teamAName + ":";
+  document.getElementById("team1Score").innerText = scoreA + "/" + wicketsA;
+  document.getElementById("team2Name").innerText = teamBName + ":";
+  document.getElementById("team2Score").innerText = scoreB + "/" + wicketsB;
+  document.getElementById("ballsRemaining").innerText = ballsLeft !== null ? ballsLeft : "—";
+
+  // Always clean up any leftover spectator rematch UI from previous match
+  const oldChoice = document.getElementById("spectatorRematchChoice");
+  if (oldChoice) oldChoice.remove();
+
+  if (isSpectator) {
+    // Spectators see result + status area for rematch updates + back button
+    document.getElementById("matchSummary").style.display = "block";
+    document.getElementById("matchStats").style.display = "block";
+    document.getElementById("rematchSection").style.display = "block";
+    document.getElementById("rematchBtn").style.display = "none";
+    document.getElementById("rematchReceiverBtns").style.display = "none";
+    document.getElementById("rematchStatus").innerText = "Waiting to see if players rematch...";
+    document.getElementById("exitMatchBtn").style.display = "block";
+  } else {
+    document.getElementById("rematchBtn").style.display = "block";
+    document.getElementById("rematchBtn").innerText = "🔄 Request Rematch";
+    document.getElementById("rematchReceiverBtns").style.display = "none";
+    document.getElementById("rematchStatus").innerText = "";
+    document.getElementById("rematchSection").style.display = "block";
+    document.getElementById("exitMatchBtn").style.display = "block";
+  }
+}
+
+// Rematch functionality
+function requestRematch() {
+  socket.send(JSON.stringify({ type: "REMATCH_REQUEST", player: mySlot }));
+  document.getElementById("rematchBtn").style.display = "none";
+  document.getElementById("rematchStatus").innerText = "⏳ Waiting for opponent...";
+  // exitMatchBtn stays visible so requester can still back out
+}
+
+function watchRematch() {
+  window.spectatorWatchingRematch = true;
+  const el = document.getElementById("spectatorRematchChoice");
+  if (el) el.remove();
+  // Show toss screen — TOSS_CALLER already fired so manually set up spectator view
+  showScreen("tossScreen");
+  document.getElementById("tossButtons").style.display = "none";
+  document.getElementById("tossWaiting").style.display = "block";
+  document.getElementById("tossMessage").innerText = "Waiting for toss...";
+  document.getElementById("coin").classList.remove("flip-heads", "flip-tails");
+}
+
+function declineRematch() {
+  socket.send(JSON.stringify({ type: "REMATCH_DECLINE", player: mySlot }));
+  document.getElementById("rematchReceiverBtns").style.display = "none";
+  document.getElementById("rematchStatus").innerText = "❌ You declined.";
+  // exitMatchBtn is already visible
+}
+
+function exitMatch() {
+  location.reload();
+}
+
+// Server connection
 function connectToServer(code, overs, wickets, spectate = false) {
 
   socket = new WebSocket(
@@ -504,7 +580,7 @@ function connectToServer(code, overs, wickets, spectate = false) {
         overs, 
         wickets, 
         mode: gameMode,
-        spectate // Add this
+        spectate
       }
     }));
   };
@@ -513,13 +589,11 @@ function connectToServer(code, overs, wickets, spectate = false) {
     console.log("Received:", event.data);
     const data = JSON.parse(event.data);
 
-    // ── ROOM_JOINED ──
     if (data.type === "ROOM_JOINED") {
       roomCode = data.payload.roomCode;
       mySlot = data.payload.slot;
       document.getElementById("lobbyRoomCode").innerText = roomCode;
       
-      // Show spectator badge if spectating
       if (mySlot === "SPECTATOR") {
         isSpectator = true;
         const badge = document.createElement("div");
@@ -528,34 +602,34 @@ function connectToServer(code, overs, wickets, spectate = false) {
         badge.id = "spectatorBadge";
         document.body.appendChild(badge);
         
-        // Hide start button for spectators
         document.getElementById("startMatchBtn").style.display = "none";
       }
     }
 
-    // ── LOBBY_UPDATE ──
     if (data.type === "LOBBY_UPDATE") {
       document.getElementById("lobbyRoomCode").innerText = roomCode;
       document.getElementById("teamA").innerText = data.payload.teamA || "Empty";
       document.getElementById("teamB").innerText = data.payload.teamB || "Empty";
       
-      // Update spectator count
       if (data.payload.spectatorCount !== undefined) {
         document.getElementById("spectatorCount").innerText = data.payload.spectatorCount;
+        document.getElementById("liveSpectatorCount").innerText = data.payload.spectatorCount;
       }
     }
 
-    // ── TOSS_CALLER ──
     if (data.type === "TOSS_CALLER") {
+      // Block spectators ONLY during rematch toss (they need to click "Watch Again" first)
+      // During the first match, spectators follow along automatically
+      if (isSpectator && !window.spectatorWatchingRematch && window.rematchHasHappened) return;
+
       showScreen("tossScreen");
-      
+
       const coin = document.getElementById("coin");
       coin.classList.remove("flip-heads", "flip-tails");
       isTossing = false;
-      
+
       const iAmCaller = data.payload.caller === mySlot;
-      
-      // Hide buttons for spectators
+
       if (isSpectator) {
         document.getElementById("tossButtons").style.display = "none";
         document.getElementById("tossWaiting").style.display = "block";
@@ -563,38 +637,37 @@ function connectToServer(code, overs, wickets, spectate = false) {
       } else {
         document.getElementById("tossButtons").style.display = iAmCaller ? "flex" : "none";
         document.getElementById("tossWaiting").style.display = iAmCaller ? "none" : "block";
-        document.getElementById("tossMessage").innerText = iAmCaller 
-          ? "Make your call!" 
+        document.getElementById("tossMessage").innerText = iAmCaller
+          ? "Make your call!"
           : "Opponent is calling...";
       }
     }
 
-    // ── TOSS_RESULT ──
-   if (data.type === "TOSS_RESULT") {
-  // Animate the coin flip
-  animateCoinFlip(data.payload.coin);
-  
-  // Wait for animation to complete, then show decision screen
-  setTimeout(() => {
-    const teamAName = document.getElementById("teamA").innerText;
-    const teamBName = document.getElementById("teamB").innerText;
+    if (data.type === "TOSS_RESULT") {
+      animateCoinFlip(data.payload.coin);
+      
+      setTimeout(() => {
+        const teamAName = document.getElementById("teamA").innerText;
+        const teamBName = document.getElementById("teamB").innerText;
 
-    showScreen("decisionScreen");
+        showScreen("decisionScreen");
 
-    // Show toss result
-    document.getElementById("decisionWaiting").innerText =
-      "🪙 " + data.payload.coin.toUpperCase() + " — " + data.payload.winner + " won the toss!";
+        document.getElementById("decisionWaiting").innerText =
+          "🪙 " + data.payload.coin.toUpperCase() + " — " + data.payload.winner + " won the toss!";
 
-    const amIWinner =
-      (mySlot === "A" && data.payload.winner === teamAName) ||
-      (mySlot === "B" && data.payload.winner === teamBName);
+        const amIWinner =
+          (mySlot === "A" && data.payload.winner === teamAName) ||
+          (mySlot === "B" && data.payload.winner === teamBName);
 
-    document.getElementById("decisionButtons").style.display = amIWinner ? "flex" : "none";
-    document.getElementById("decisionWaiting").style.display = "block";
-  }, 2500); // Extra 500ms after animation to read result
-}
+        if (isSpectator) {
+          document.getElementById("decisionButtons").style.display = "none";
+        } else {
+          document.getElementById("decisionButtons").style.display = amIWinner ? "flex" : "none";
+        }
+        document.getElementById("decisionWaiting").style.display = "block";
+      }, 2500);
+    }
 
-    // ── MATCH_DECISION ── (update to hide buttons for spectators)
     if (data.type === "MATCH_DECISION") {
       matchMode = data.payload.mode;
       matchOvers = data.payload.overs || 0;
@@ -630,57 +703,148 @@ function connectToServer(code, overs, wickets, spectate = false) {
       startPreviewCountdown();
     }
 
-    // ── BALL_RESULT ──
     if (data.type === "BALL_RESULT") {
       window.handLocked = false;
-selectedFingers = [];
-document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
-document.getElementById("selectedDisplay").innerText = "None";
+if (isSpectator) {
+        document.getElementById("lockStatusA").classList.remove("locked");
+        document.getElementById("lockStatusB").classList.remove("locked");
+        document.getElementById("lockStateA").innerText = "Waiting ⏳";
+        document.getElementById("lockStateB").innerText = "Waiting ⏳";
+      }
+      selectedFingers = [];
+      document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
+      document.getElementById("selectedDisplay").innerText = "None";
 
       updateScoreboard(data.payload);
       updateBallHistory(data.payload.balls, data.payload.out, data.payload.lastRuns);
       showBallMessage(data.payload.out, data.payload.lastRuns);
 
-      /* script.js — replace the matchOver block inside BALL_RESULT handler */
-
-if (data.payload.matchOver) {
-  const winner = data.payload.winner;
-  const isDraw = winner === "Draw";
-  setTimeout(() => {
-    document.getElementById("resultEmoji").innerText = isDraw ? "🤝" : "🏆";
-    document.getElementById("resultTitle").innerText = isDraw ? "It's a Draw!" : "Match Over!";
-    document.getElementById("resultText").innerText =
-      isDraw ? "Both teams scored the same!" : "🎉 Winner: " + winner;
-    window.afterCopy = false;
-    window.matchOverResult = true;
-    showScreen("resultScreen");
-  }, 900);
-}
+      if (data.payload.matchOver) {
+        setTimeout(() => {
+          displayMatchResult(data.payload);
+          window.afterCopy = false;
+          window.matchOverResult = true;
+          showScreen("resultScreen");
+        }, 900);
+      }
     }
 
-    /* script.js — replace the INNINGS_BREAK handler inside socket.onmessage */
+    if (data.type === "INNINGS_BREAK") {
+      window.handLocked = false;
+      lastBalls = [];
 
-if (data.type === "INNINGS_BREAK") {
-  window.handLocked = false;
-  lastBalls = [];
+      const p = data.payload;
 
-  const p = data.payload;
+      document.getElementById("breakBattedName").innerText = p.nextBowlingName;
+      document.getElementById("breakScore1").innerText =
+        p.innings1Score + " / " + p.innings1Wickets;
+      document.getElementById("breakTarget").innerText = p.target;
+      document.getElementById("breakBattingNext").innerText = p.nextBattingName;
+      document.getElementById("breakModeInfo").innerText =
+        p.mode === "limited"
+          ? "Needs " + p.target + " in " + (p.overs * 6) + " balls"
+          : "Needs " + p.target + " runs (no ball limit)";
 
-  document.getElementById("breakBattedName").innerText = p.nextBowlingName;
-  document.getElementById("breakScore1").innerText =
-    p.innings1Score + " / " + p.innings1Wickets;
-  document.getElementById("breakTarget").innerText = p.target;
-  document.getElementById("breakBattingNext").innerText = p.nextBattingName;
-  document.getElementById("breakModeInfo").innerText =
-    p.mode === "limited"
-      ? "Needs " + p.target + " in " + (p.overs * 6) + " balls"
-      : "Needs " + p.target + " runs (no ball limit)";
+      showScreen("inningsBreakScreen");
+      startBreakCountdown();
+    }
 
-  showScreen("inningsBreakScreen");
-  startBreakCountdown();
-}
+if (data.type === "LOCK_STATUS") {
+      if (!isSpectator) return; // players don't need this
 
-    // ── ROOM_FULL ── (update to suggest spectating)
+      const { lockedA, lockedB, nameA, nameB } = data.payload;
+
+      // Make sure bar is visible for spectator
+      document.getElementById("lockStatusBar").style.display = "flex";
+
+      document.getElementById("lockNameA").innerText = nameA || "Player A";
+      document.getElementById("lockNameB").innerText = nameB || "Player B";
+
+      const elA = document.getElementById("lockStatusA");
+      const elB = document.getElementById("lockStatusB");
+
+      elA.classList.toggle("locked", lockedA);
+      elB.classList.toggle("locked", lockedB);
+
+      document.getElementById("lockStateA").innerText = lockedA ? "Locked 🔒" : "Waiting ⏳";
+      document.getElementById("lockStateB").innerText = lockedB ? "Locked 🔒" : "Waiting ⏳";
+    }
+
+    if (data.type === "REMATCH_REQUEST") {
+      if (isSpectator) {
+        // Show spectators who requested
+        document.getElementById("rematchStatus").innerText =
+          "⏳ " + data.payload.fromName + " wants a rematch. Waiting for opponent...";
+        return;
+      }
+      if (data.payload.from === mySlot) {
+        // I am the requester — already updated locally in requestRematch()
+        return;
+      }
+      // I am the receiver
+      document.getElementById("rematchBtn").style.display = "none";
+      document.getElementById("rematchStatus").innerText =
+        "🏏 " + data.payload.fromName + " wants a rematch!";
+      document.getElementById("rematchReceiverBtns").style.display = "flex";
+    }
+
+if (data.type === "REMATCH_DECLINED") {
+      document.getElementById("rematchReceiverBtns").style.display = "none";
+      document.getElementById("rematchBtn").style.display = "none";
+
+      if (isSpectator) {
+        document.getElementById("rematchStatus").innerText =
+          "❌ " + data.payload.fromName + " declined. No rematch.";
+        return;
+      }
+      // Personalised message: decliner vs requester
+      if (data.payload.fromName === playerName) {
+        document.getElementById("rematchStatus").innerText = "❌ You declined.";
+      } else {
+        document.getElementById("rematchStatus").innerText =
+          "❌ " + data.payload.fromName + " declined.";
+      }
+    }
+
+    if (data.type === "REMATCH_START") {
+      const old = document.getElementById("spectatorRematchChoice");
+      if (old) old.remove();
+
+      if (isSpectator) {
+        window.spectatorWatchingRematch = false;
+        window.rematchHasHappened = true; // from now on block TOSS_CALLER until Watch Again
+
+        document.getElementById("resultEmoji").innerText = "👁️";
+        document.getElementById("resultTitle").innerText = "Rematch Starting!";
+        document.getElementById("matchSummary").style.display = "none";
+        document.getElementById("matchStats").style.display = "none";
+        document.getElementById("rematchSection").style.display = "none";
+        document.getElementById("exitMatchBtn").style.display = "none";
+
+        const spectatorChoice = document.createElement("div");
+        spectatorChoice.id = "spectatorRematchChoice";
+        spectatorChoice.style.cssText = "display:flex;flex-direction:column;gap:10px;width:100%";
+        spectatorChoice.innerHTML = `
+          <p style="color:var(--text-muted);font-size:14px;margin:0;">Players are starting a rematch.</p>
+          <button class="btnPrimary fullWidth" onclick="watchRematch()">👁️ Watch Again</button>
+          <button class="btnSecondary fullWidth" onclick="exitMatch()">← Back to Menu</button>
+        `;
+        document.querySelector("#resultScreen .centerCard").appendChild(spectatorChoice);
+        return;
+      }
+
+      isTossing = false;
+      lastBalls = [];
+      selectedFingers = [];
+      window.handLocked = false;
+
+      document.getElementById("tossMessage").innerText = "Starting rematch...";
+      document.getElementById("tossButtons").style.display = "none";
+      document.getElementById("tossWaiting").style.display = "none";
+      document.getElementById("coin").classList.remove("flip-heads", "flip-tails");
+      showScreen("tossScreen");
+    }
+
     if (data.type === "ROOM_FULL") {
       if (data.payload && data.payload.canSpectate) {
         if (confirm("Room is full! Would you like to spectate instead?")) {
@@ -694,4 +858,19 @@ if (data.type === "INNINGS_BREAK") {
       }
     }
   };
+}
+
+function resetLockBar() {
+  document.getElementById("lockStatusA").classList.remove("locked");
+  document.getElementById("lockStatusB").classList.remove("locked");
+  document.getElementById("lockStateA").innerText = "Waiting ⏳";
+  document.getElementById("lockStateB").innerText = "Waiting ⏳";
+  // Hide bar — will show again when LOCK_STATUS arrives for spectators
+  document.getElementById("lockStatusBar").style.display = "none";
+}
+
+function acceptRematch() {
+  socket.send(JSON.stringify({ type: "REMATCH_ACCEPT", player: mySlot }));
+  document.getElementById("rematchReceiverBtns").style.display = "none";
+  document.getElementById("rematchStatus").innerText = "✅ Accepted! Starting...";
 }
