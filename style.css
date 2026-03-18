@@ -266,7 +266,6 @@ button:active { transform: scale(0.97); }
   font-weight: 700;
 }
 
-/* Add spectator badge */
 .spectatorBadge {
   position: fixed;
   top: 14px;
@@ -293,8 +292,6 @@ button:active { transform: scale(0.97); }
   font-size: 14px;
   margin: 8px 0 0 0;
 }
-
-/* Add these styles after the .waitingText rule */
 
 /* ── Coin Toss Animation ── */
 .coinContainer {
@@ -343,7 +340,6 @@ button:active { transform: scale(0.97); }
   transform: rotateY(180deg);
 }
 
-/* Coin flip animations */
 @keyframes flipHeads {
   0% { transform: rotateY(0deg) rotateX(0deg); }
   100% { transform: rotateY(1800deg) rotateX(360deg); }
@@ -433,6 +429,20 @@ button:active { transform: scale(0.97); }
   justify-content: center;
   gap: 6px;
 }
+.scoreRow6 {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.liveSpectators {
+  font-weight: 500;
+}
+.liveSpectators span {
+  color: var(--accent2);
+  font-weight: 700;
+}
 .ballBox {
   width: 32px;
   height: 32px;
@@ -455,7 +465,7 @@ button:active { transform: scale(0.97); }
 
 /* ── Game Controls ── */
 .gameControls {
-  margin-top: 220px; /* clears fixed scoreboard */
+  margin-top: 240px;
   padding: 16px;
   width: 100%;
   max-width: 500px;
@@ -482,22 +492,10 @@ button:active { transform: scale(0.97); }
   margin: 0;
 }
 
-/* REPLACE the #fingerButtons section with this */
-
-/* ── Hand Styles ── */
-:root {
-  --hand-skin: #f4a460;
-  --hand-outline: #8b4513;
-}
-
-body.light {
-  --hand-skin: #ffb380;
-  --hand-outline: #a0522d;
-}
-
+/* ── REALISTIC HAND WITH CURLING ANIMATIONS ── */
 .handContainer {
   width: 100%;
-  max-width: 300px;
+  max-width: 340px;
   margin: 20px auto;
   display: flex;
   justify-content: center;
@@ -507,77 +505,148 @@ body.light {
 .hand {
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
-  cursor: pointer;
+  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.3));
 }
 
 .finger {
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.05s ease;
 }
 
 .finger:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.15);
 }
 
 .finger:active {
   transform: scale(0.98);
 }
 
-/* Finger states */
-.finger .finger-closed {
-  transition: opacity 0.3s ease;
+/* ── THUMB CURLING ANIMATION ── */
+#thumb .thumb-base,
+#thumb .thumb-mid,
+#thumb .thumb-tip,
+#thumb .thumb-nail {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              opacity 0.4s ease;
+  transform-origin: center;
 }
 
-.finger .finger-open {
-  transition: opacity 0.3s ease;
+/* Thumb open state */
+#thumb.open .thumb-base {
+  transform: translate(-8px, -5px) rotate(-15deg);
+}
+#thumb.open .thumb-mid {
+  transform: translate(-20px, -15px) rotate(-25deg);
+}
+#thumb.open .thumb-tip {
+  transform: translate(-32px, -25px) rotate(-30deg);
+}
+#thumb.open .thumb-nail {
+  transform: translate(-32px, -25px) rotate(-30deg);
 }
 
-.finger.open .finger-closed {
-  opacity: 0;
+/* ── INDEX FINGER CURLING ANIMATION ── */
+#index .index-base,
+#index .index-mid,
+#index .index-tip,
+#index .index-nail {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
 }
 
-.finger.open .finger-open {
-  opacity: 1;
+/* Index open state */
+#index.open .index-base {
+  transform: translateY(-10px) rotate(-5deg);
+}
+#index.open .index-mid {
+  transform: translateY(-35px) rotate(-8deg);
+}
+#index.open .index-tip {
+  transform: translateY(-55px) rotate(-10deg);
+}
+#index.open .index-nail {
+  transform: translateY(-55px) rotate(-10deg);
 }
 
-/* Selected finger highlight */
-.finger.open {
-  filter: drop-shadow(0 0 8px var(--green));
+/* ── MIDDLE FINGER CURLING ANIMATION ── */
+#middle .middle-base,
+#middle .middle-mid,
+#middle .middle-tip,
+#middle .middle-nail {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
 }
 
-/* Lock animation - all fingers close */
-.hand.locking .finger .finger-closed {
-  opacity: 1 !important;
+/* Middle open state */
+#middle.open .middle-base {
+  transform: translateY(-12px) rotate(-3deg);
+}
+#middle.open .middle-mid {
+  transform: translateY(-45px) rotate(-5deg);
+}
+#middle.open .middle-tip {
+  transform: translateY(-70px) rotate(-7deg);
+}
+#middle.open .middle-nail {
+  transform: translateY(-70px) rotate(-7deg);
 }
 
-.hand.locking .finger .finger-open {
-  opacity: 0 !important;
+/* ── RING FINGER CURLING ANIMATION ── */
+#ring .ring-base,
+#ring .ring-mid,
+#ring .ring-tip,
+#ring .ring-nail {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
 }
 
-.hand.locking .finger {
-  animation: fingerClose 0.4s ease-out;
+/* Ring open state */
+#ring.open .ring-base {
+  transform: translateY(-10px) rotate(3deg);
+}
+#ring.open .ring-mid {
+  transform: translateY(-35px) rotate(5deg);
+}
+#ring.open .ring-tip {
+  transform: translateY(-55px) rotate(7deg);
+}
+#ring.open .ring-nail {
+  transform: translateY(-55px) rotate(7deg);
 }
 
-@keyframes fingerClose {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-  100% { transform: translateY(0); }
+/* ── PINKY FINGER CURLING ANIMATION ── */
+#pinky .pinky-base,
+#pinky .pinky-mid,
+#pinky .pinky-tip,
+#pinky .pinky-nail {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
 }
-#fingerButtons button {
-  flex: 1 1 calc(33% - 10px);
-  max-width: 130px;
-  background: var(--surface2);
-  color: var(--text);
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 8px;
-  font-size: 14px;
+
+/* Pinky open state */
+#pinky.open .pinky-base {
+  transform: translateY(-8px) rotate(8deg);
 }
-.fingerBtn.selected {
-  background: var(--accent) !important;
-  color: white !important;
-  border-color: var(--accent) !important;
+#pinky.open .pinky-mid {
+  transform: translateY(-28px) rotate(12deg);
+}
+#pinky.open .pinky-tip {
+  transform: translateY(-45px) rotate(15deg);
+}
+#pinky.open .pinky-nail {
+  transform: translateY(-45px) rotate(15deg);
+}
+
+/* ── LOCK ANIMATION - Hand closes with bounce ── */
+.hand.locking .finger > * {
+  animation: fingerCurl 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+  transform: translate(0, 0) rotate(0deg) !important;
+}
+
+@keyframes fingerCurl {
+  0% { transform: var(--open-transform); }
+  60% { transform: translate(0, 5px) rotate(0deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 .selectedLabel {
@@ -683,8 +752,6 @@ body.light {
   color: var(--text-muted);
 }
 
-/* Add these styles after the .breakCountdown rule */
-
 .matchInfoGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -721,13 +788,75 @@ body.light {
   font-size: 18px;
 }
 
-/* ── Result Screen ── */
-.resultText {
+/* ── Enhanced Result Screen ── */
+.resultCard {
+  max-width: 420px;
+  gap: 16px;
+}
+
+.matchSummary {
+  width: 100%;
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.winnerText {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--green);
+  margin: 0 0 8px 0;
+}
+
+.marginText {
   font-size: 16px;
-  color: var(--text-muted);
-  white-space: pre-line;
-  line-height: 1.6;
+  color: var(--amber);
+  font-weight: 600;
   margin: 0;
+}
+
+.matchStats {
+  width: 100%;
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.statLabel {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.statValue {
+  color: var(--text);
+  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.rematchSection {
+  width: 100%;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.rematchStatus {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
+  min-height: 20px;
 }
 
 /* ── Theme Toggle ── */
@@ -743,4 +872,59 @@ body.light {
   border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
+}
+
+.lockStatusBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 95%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.lockPlayer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 12px;
+  gap: 2px;
+  transition: background 0.25s;
+}
+
+.lockPlayer span:nth-child(2) {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.lockState {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lockPlayer.locked {
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+.lockPlayer.locked .lockState {
+  color: var(--green);
+}
+
+.lockDivider {
+  width: 1px;
+  height: 48px;
+  background: var(--border);
+  flex-shrink: 0;
 }
