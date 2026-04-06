@@ -817,6 +817,11 @@ updateDeclareBtn();
       lastBalls = [];
       localBallCount = 0;
       const p = data.payload;
+
+      // ← Fix: update batting/bowling names NOW so isBatter2 check is correct immediately
+      currentBattingName = p.nextBattingName;
+      currentBowlingName = p.nextBowlingName;
+
       document.getElementById("breakBattedName").innerText  = p.nextBowlingName;
       document.getElementById("breakScore1").innerText      = p.innings1Score + " / " + p.innings1Wickets;
       document.getElementById("breakTarget").innerText      = p.target;
@@ -826,8 +831,8 @@ updateDeclareBtn();
           ? "Needs " + p.target + " in " + (p.overs * 6) + " balls"
           : "Needs " + p.target + " runs (no ball limit)";
       showScreen("inningsBreakScreen");
-currentInnings = 2;
-  updateDeclareBtn();
+      currentInnings = 2;
+      updateDeclareBtn();
       startBreakCountdown();
     }
 
