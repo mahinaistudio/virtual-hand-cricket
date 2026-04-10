@@ -1,14 +1,14 @@
 {
-  "name": "Crickverse",
-  "short_name": "Crickverse",
+  "name": "CrickVerse",
+  "short_name": "CrickVerse",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#0b1c2c",
+  "theme_color": "#0b1c2c",
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
