@@ -1,6 +1,3 @@
-/* script.js */
-
-// ── State ──
 let lastBalls = [];
 let selectedFingers = [];
 let syncedBallHistory = [];
@@ -309,32 +306,38 @@ function sendDecision(choice) {
 // ── Hand ──
 function toggleHandFinger(finger) {
   if (window.handLocked) return;
-  const el = document.getElementById(finger);
+
+  const layer = document.getElementById('layer-' + finger);
+  if (!layer) return;
+
   if (selectedFingers.includes(finger)) {
     selectedFingers = selectedFingers.filter(f => f !== finger);
-    el.classList.remove("open");
+    layer.classList.remove('open');
   } else {
     selectedFingers.push(finger);
-    el.classList.add("open");
+    layer.classList.add('open');
   }
-  const names = { thumb:"👍 Thumb", index:"☝️ Index", middle:"🖕 Middle", ring:"💍 Ring", pinky:"🤙 Pinky" };
-  document.getElementById("selectedDisplay").innerText =
-    selectedFingers.length > 0 ? selectedFingers.map(f => names[f]).join(", ") : "None";
+
+  const names = { thumb:'👍 Thumb', index:'☝️ Index', middle:'🖕 Middle', ring:'💍 Ring', pinky:'🤙 Pinky' };
+  document.getElementById('selectedDisplay').innerText =
+    selectedFingers.length > 0 ? selectedFingers.map(f => names[f]).join(', ') : 'None';
 }
 
 function lockHand() {
-  if (selectedFingers.length === 0) { showAlert("Select at least one finger!", "✋"); return; }
+  if (selectedFingers.length === 0) { showAlert('Select at least one finger!', '✋'); return; }
   if (window.handLocked) return;
   window.handLocked = true;
-  socket.send(JSON.stringify({ type: "HAND_SELECT", player: mySlot, fingers: selectedFingers }));
-  socket.send(JSON.stringify({ type: "HAND_LOCK",   player: mySlot }));
-  const hand = document.querySelector(".hand");
-  hand.classList.add("locking");
+
+  socket.send(JSON.stringify({ type: 'HAND_SELECT', player: mySlot, fingers: selectedFingers }));
+  socket.send(JSON.stringify({ type: 'HAND_LOCK',   player: mySlot }));
+
+  const rig = document.getElementById('handRig');
+  rig.classList.add('locking');
   setTimeout(() => {
-    document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
-    hand.classList.remove("locking");
-  }, 500);
-  document.getElementById("selectedDisplay").innerText = "🔒 Locked! Waiting...";
+    rig.classList.remove('locking');
+  }, 300);
+
+  document.getElementById('selectedDisplay').innerText = '🔒 Locked! Waiting...';
 }
 
 // ── Declare ──
@@ -441,7 +444,9 @@ function resetGameScreenForInnings(inningsNum) {
   lastBalls = [];
   localBallCount = 0;          // ← reset local ball counter
   selectedFingers = [];
-  document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
+  document.querySelectorAll('.handLayer').forEach(l => {
+  if (!l.classList.contains('base')) l.classList.remove('open');
+});
   document.getElementById("selectedDisplay").innerText = "None";
   document.getElementById("mainScore").innerText    = "0 / 0";
   document.getElementById("overDisplay").innerText  = "0.0";
@@ -1031,7 +1036,7 @@ animateCoinFlip(data.payload.coin);
   }
   window.handLocked = false;
   selectedFingers   = [];
-  document.querySelectorAll(".finger").forEach(f => f.classList.remove("open"));
+  document.querySelectorAll('.handLayer').forEach(l => { if (!l.classList.contains('base')) l.classList.remove('open'); });
   document.getElementById("selectedDisplay").innerText = "None";
 
   // ← NEW: if spectator is still on preview, keep stash in sync
